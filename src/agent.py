@@ -3,6 +3,7 @@ from typing import TypedDict, List
 from models import PullRequest, ReviewComment
 from github_client import GitHubClient
 from code_reviewer import CodeReviewer
+import requests
 
 class ReviewState(TypedDict):
     pr: PullRequest
@@ -88,3 +89,39 @@ class CodeReviewAgent:
         )
         result_state = self.graph.invoke(initial_state)
         return result_state["comments"], pr.title, pr.id
+
+    def run_review(self, pr_number: int) -> None:
+        """
+        运行完整的代码审查流程
+        
+        Args:
+            pr_number: PR编号
+        """
+        try:
+            print(f"正在获取PR #{pr_number}的数据...")
+            pr = self.github_client.get_pull_request(pr_number)
+            print(f"PR标题: {pr.title}")
+            print(f"发现 {len(pr.changes)} 个代码变更")
+            
+            initial_state = ReviewState(
+                pr=pr,
+                comments=[],
+                current_change_index=0
+            )
+            
+            print("开始AI代码审查...")
+            result_state = self.graph.invoke(initial_state)
+            
+            comments = result_state["comments"]
+            print(f"审查完成，发现 {len(comments)} 个问题")
+            
+            # 打印审查结果摘要
+            severity_count = {"info": 0, "warning": 0, "error": 0}
+            for comment in comments:
+                severity_count[comment.severity] += 1
+            
+            print(f"问题统计: {severity_count['error']} 个错误, {severity_count['warning']} 个警告, {severity_count['info']} 个信息")
+            
+        except Exception as e:
+            print(f"代码审查过程中发生错误: {e}")
+            raise
