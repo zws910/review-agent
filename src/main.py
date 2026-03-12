@@ -19,13 +19,13 @@ app = FastAPI(
 )
 
 class ReviewRequest(BaseModel):
-    pr_number: int = Field(..., description="GitHub PR号码", example=123)
+    pr_number: int = Field(..., description="GitHub PR号码", json_schema_extra={"example": 123})
 
 class ReviewURLRequest(BaseModel):
     pr_url: str = Field(
         ..., 
         description="GitHub PR的完整URL地址",
-        example="https://github.com/owner/repo/pull/123",
+        json_schema_extra={"example": "https://github.com/owner/repo/pull/123"},
         pattern=r"https://github\.com/[^/]+/[^/]+/pull/\d+"
     )
 
@@ -172,5 +172,11 @@ async def health_check():
     return {"status": "ok"}
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # 检查是否在GitHub Actions环境中
+    if os.getenv("GITHUB_ACTIONS") or os.getenv("REPO_OWNER"):
+        # GitHub Actions模式：运行命令行审查
+        main()
+    else:
+        # 本地开发模式：启动web服务器
+        import uvicorn
+        uvicorn.run(app, host="0.0.0.0", port=8000)
