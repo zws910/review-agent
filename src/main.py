@@ -170,7 +170,39 @@ async def health_check():
     - `status`: "ok" 表示服务正常
     """
     return {"status": "ok"}
-
+def main():
+    """命令行模式：运行代码审查"""
+    # 从环境变量获取配置
+    api_key = os.getenv("MOONSHOT_API_KEY")
+    if not api_key:
+        raise ValueError("请设置 MOONSHOT_API_KEY 环境变量")
+    
+    github_token = os.getenv("GITHUB_TOKEN")
+    if not github_token:
+        raise ValueError("请设置 GITHUB_TOKEN 环境变量")
+    
+    # 获取仓库信息
+    repo_owner = os.getenv("REPO_OWNER")
+    repo_name = os.getenv("REPO_NAME") 
+    pr_number = os.getenv("PR_NUMBER")
+    
+    if not all([repo_owner, repo_name, pr_number]):
+        raise ValueError("请设置 REPO_OWNER, REPO_NAME, PR_NUMBER 环境变量")
+    
+    print(f"开始审查 PR: {repo_owner}/{repo_name}#{pr_number}")
+    
+    # 初始化组件
+    github_client = GitHubClient(github_token, repo_owner, repo_name)
+    reviewer = CodeReviewer()
+    agent = CodeReviewAgent(github_client, reviewer)
+    
+    # 运行代码审查
+    try:
+        agent.run_review(int(pr_number))
+        print("代码审查完成")
+    except Exception as e:
+        print(f"代码审查失败: {e}")
+        raise
 if __name__ == "__main__":
     # 检查是否在GitHub Actions环境中
     if os.getenv("GITHUB_ACTIONS") or os.getenv("REPO_OWNER"):
